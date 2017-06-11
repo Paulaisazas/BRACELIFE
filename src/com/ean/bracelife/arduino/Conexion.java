@@ -1,8 +1,13 @@
 package com.ean.bracelife.arduino;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ean.bracelife.db.ConexionDB;
+import com.ean.bracelife.entidades.AdultoMayor;
+import com.ean.bracelife.entidades.Brazalete;
+import com.ean.bracelife.entidades.Parametros;
 import com.panamahitek.ArduinoException;
 import com.panamahitek.PanamaHitek_Arduino;
 import org.apache.log4j.Logger;
@@ -16,10 +21,15 @@ public class Conexion {
 	
 	PanamaHitek_Arduino iniciador = new PanamaHitek_Arduino();
 	ProcesadorPulso procesador = new ProcesadorPulso();
+	AdultoMayor adultoMayor = new AdultoMayor();
+	Parametros parametros = new Parametros();
+	Brazalete brazalete = new Brazalete();
 	
 	//Estas variables ID y nombrePaciente quedarán en memoria durante el tiempo que corra el programa
 	String IDPaciente;
 	String nombrePaciente;
+	int contadorBajo = 0;
+	int contadorAlto = 0;
 	
 	SerialPortEventListener listener = new SerialPortEventListener(){
 		@Override
@@ -29,8 +39,28 @@ public class Conexion {
 				if(iniciador.isMessageAvailable()){
 					//Obtenemos el pulso del paciente
 					String mensaje = iniciador.printMessage();
+					logger.info(mensaje);
+					int pulso = Integer.parseInt(mensaje);
+					
+					if(pulso<parametros.getValorMinimo()){
+						contadorBajo++;
+						contadorAlto = 0;
+						adultoMayor.setContadorPulsoBajo(contadorBajo);
+						logger.info("Contador bajo: " + contadorBajo);
+					} else if(pulso>parametros.getValorMaximo()){
+						contadorAlto++;
+						contadorBajo = 0;
+						adultoMayor.setContadorPulsoAlto(contadorAlto);
+						logger.info("Contador alto: " + contadorAlto);
+					} else{
+						contadorBajo = 0;
+						contadorAlto = 0;
+						adultoMayor.setContadorPulsoBajo(0);
+						adultoMayor.setContadorPulsoAlto(0);
+					}
+					
 					//Se procesa cada pulso en BD
-					procesador.procesarPulso(mensaje, nombrePaciente);
+					procesador.procesarPulso(mensaje, adultoMayor);
 				}
 			} catch (SerialPortException | ArduinoException e) {
 				logger.error("Se ha presentado un error con la recepción de mensajería: "+ e);
@@ -44,8 +74,17 @@ public class Conexion {
 		try {
 			//Extraemos todos los puertos disponibles de Arduino
 			ports = iniciador.getSerialPorts();
-			//Asignamos los datos de ID y Nombre que obtuvimos en la clase Main.java
-			IDPaciente = String.valueOf(idPaciente);
+			//Buscamos el adulto mayor con el id del paciente
+			adultoMayor = ConexionDB.obtenerAdultoMayorporID(idPaciente);
+			
+			//Obtenemos los parametros
+			parametros = ConexionDB.obtenerParametros();
+			
+			//Generamos un nuevo brazalete para el paciente.
+			brazalete.setIdPaciente(idPaciente);
+			ConexionDB.obtenerBrazalete(brazalete);
+			
+			
 			nombrePaciente = nombre;
 			
 			//Si no existen puertos, se finaliza el programa.
@@ -62,6 +101,9 @@ public class Conexion {
 		} catch (ArduinoException | SerialPortException e) {
 			logger.error("Se ha presentado un error con la conexión al puerto: " + ports.get(0));
 			logger.error(e);
+			System.exit(-1);
+		} catch (SQLException e){
+			e.printStackTrace();
 			System.exit(-1);
 		}
 	}

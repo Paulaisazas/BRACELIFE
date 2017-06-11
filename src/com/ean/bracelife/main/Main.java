@@ -28,7 +28,6 @@ public class Main {
 		
 		//Inicio la recepción de mensajes de Arduino con el id y el nombre del paciente.
 		new Conexion(pacienteID, nombre);
-
 	}
 	
 	public static String obtenerIDArchivo(){
