@@ -34,6 +34,9 @@ package com.panamahitek;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.log4j.Logger;
+
 import jssc.*;
 import static jssc.SerialPort.PURGE_RXCLEAR;
 import static jssc.SerialPort.PURGE_TXCLEAR;
@@ -43,6 +46,8 @@ import static jssc.SerialPort.PURGE_TXCLEAR;
  * http://panamahitek.com
  */
 public class PanamaHitek_Arduino {
+	
+	Logger logger = Logger.getLogger(PanamaHitek_Arduino.class);
 
     private SerialPort serialPort;
     private SerialPortEventListener events = null;
@@ -181,6 +186,7 @@ public class PanamaHitek_Arduino {
             serialPort.setParams(DATA_RATE, BYTESIZE, STOPBITS, PARITY);
             flushSerialPort();
         } catch (SerialPortException ex) {
+        	logger.info("Excepción generada: " + ex);
             throw new ArduinoException(portName, "arduinoTX()", ArduinoException.TYPE_PORT_NOT_OPENED);
         }
 
@@ -218,6 +224,7 @@ public class PanamaHitek_Arduino {
             serialPort.addEventListener(events);
             flushSerialPort();
         } catch (SerialPortException ex) {
+        	logger.info("Excepción generada: " + ex);
             throw new ArduinoException(portName, "arduinoRXTX()", ArduinoException.TYPE_PORT_NOT_OPENED);
         }
 
@@ -245,7 +252,7 @@ public class PanamaHitek_Arduino {
      */
     public void arduinoRX(String PORT_NAME, int DATA_RATE, SerialPortEventListener events) throws ArduinoException, SerialPortException {
 
-        if (connection.equals("")) {
+        if (("").equals(connection)) {
             connection = "RX";
         } else {
             throw new ArduinoException(portName, "arduinoRX()", ArduinoException.TYPE_RXTX_EXCEPTION);
@@ -258,6 +265,7 @@ public class PanamaHitek_Arduino {
             serialPort.addEventListener(events);
             flushSerialPort();
         } catch (SerialPortException ex) {
+        	logger.info("Excepción generada: " + ex);
             throw new ArduinoException(portName, "arduinoRX()", ArduinoException.TYPE_PORT_NOT_OPENED);
         }
     }

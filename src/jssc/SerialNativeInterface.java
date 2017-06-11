@@ -30,12 +30,15 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import org.apache.log4j.Logger;
+
 /**
  *
  * @author scream3r
  */
 public class SerialNativeInterface {
 
+	static Logger logger = Logger.getLogger(SerialNativeInterface.class);
     private static final String libVersion = "2.8"; //jSSC-2.8.0 Release from 24.01.2014
     private static final String libMinorSuffix = "0"; //since 0.9.0
 
@@ -135,8 +138,11 @@ public class SerialNativeInterface {
         }
 
         libFolderPath = libRootFolder + fileSeparator + ".jssc" + fileSeparator + osName;
+        logger.info("Path " + libFolderPath);
         libName = "jSSC-" + libVersion + "_" + architecture;
+        logger.info("Nombre de la librería: " + libName);
         libName = System.mapLibraryName(libName);
+        logger.info("Nombre del archivo: " +libName);
         if (libName.endsWith(".dylib")) {//Since 2.1.0 MacOSX 10.8 fix
             libName = libName.replace(".dylib", ".jnilib");
         }
