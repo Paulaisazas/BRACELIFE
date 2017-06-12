@@ -17,8 +17,10 @@ import org.apache.log4j.Logger;
 
 import com.ean.bracelife.entidades.AdultoMayor;
 import com.ean.bracelife.entidades.Brazalete;
+import com.ean.bracelife.entidades.Notificacion;
 import com.ean.bracelife.entidades.Parametros;
 import com.ean.bracelife.entidades.Pulso;
+import com.ean.bracelife.entidades.Tutor;
 
 public class ConexionDB {
 
@@ -46,7 +48,7 @@ public class ConexionDB {
 		PreparedStatement preparedStatement = null;
 		String username = "";
 
-		String selectSQL = "SELECT PER_ID, PER_NOMBRE FROM PERSONA WHERE PER_ID = ?";
+		String selectSQL = "SELECT PER_ID, PER_NOMBRE, PER_APELLIDO FROM PERSONA WHERE PER_ID = ?";
 		try {
 			dbConnection = getDBConnection();
 			preparedStatement = dbConnection.prepareStatement(selectSQL);
@@ -56,7 +58,7 @@ public class ConexionDB {
 			ResultSet rs = preparedStatement.executeQuery();
 
 			while (rs.next()) {
-				username = rs.getString("PER_NOMBRE");
+				username = rs.getString("PER_NOMBRE") + " " + rs.getString("PER_APELLIDO");
 			}
 		} catch (SQLException e) {
 			logger.error(e.getMessage());
@@ -82,6 +84,7 @@ public class ConexionDB {
 			dbConnection = getDBConnection();
 			preparedStatement = dbConnection.prepareStatement(selectSQL);
 			preparedStatement.setInt(1, id);
+			
 
 			// execute select SQL stetement
 			ResultSet rs = preparedStatement.executeQuery();
@@ -220,6 +223,88 @@ public class ConexionDB {
 		}
 	}
 	
+	public static void guardarNotificacion(Notificacion notificacion) throws SQLException {
+
+		Connection dbConnection = null;
+		PreparedStatement preparedStatement = null;
+		
+		int idNotificacion = Integer.parseInt(properties.getProperty("notificacion"));
+		notificacion.setIdNotificacion(idNotificacion);
+		
+		idNotificacion++;
+		properties.setProperty("notificacion", String.valueOf(idNotificacion));
+		
+		try {
+			properties.store(new FileOutputStream("properties//db.properties"), null);
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		String insertTableSQL = "INSERT INTO NOTIFICACION"
+				+ "(TUTOR_PER_ID, NOT_FECHA, NOT_MENSAJE, NOT_ID) VALUES"
+				+ "(?,?,?,?)";
+
+		try {
+			dbConnection = getDBConnection();
+			preparedStatement = dbConnection.prepareStatement(insertTableSQL);
+
+			preparedStatement.setInt(1, notificacion.getIdTutor());
+			preparedStatement.setTimestamp(2, notificacion.getFechaNotificacion());
+			preparedStatement.setString(3, notificacion.getMensaje());
+			preparedStatement.setInt(4, notificacion.getIdNotificacion());
+
+			// execute insert SQL stetement
+			preparedStatement.executeUpdate();
+
+		} catch (SQLException e) {
+			logger.error(e.getMessage());
+		} finally {
+			if (preparedStatement != null) {
+				preparedStatement.close();
+			}
+			if (dbConnection != null) {
+				dbConnection.close();
+			}
+		}
+	}
+	
+	public static Tutor obtenerTutorporID (int id) throws SQLException {
+		Tutor tutor = new Tutor();
+		Connection dbConnection = null;
+		PreparedStatement preparedStatement = null;
+
+		String selectSQL = "SELECT * FROM TUTOR WHERE PER_ID = ?";
+		try {
+			dbConnection = getDBConnection();
+			preparedStatement = dbConnection.prepareStatement(selectSQL);
+			preparedStatement.setInt(1, id);
+
+			// execute select SQL stetement
+			ResultSet rs = preparedStatement.executeQuery();
+			
+			if (rs.next()) {
+				tutor.setIdTutor(rs.getInt("PER_ID"));
+				tutor.setIdPaciente(rs.getInt("ADULTO_MAYOR_PER_ID"));
+				tutor.setEmailTutor(rs.getString("TUT_CORREO_ELECTRONICO"));
+				tutor.setMovilTutor(rs.getString("TUT_DISPOSITIVO_MOVIL"));
+			}
+		} catch (SQLException e) {
+			logger.error(e.getMessage());
+		} finally {
+			if (preparedStatement != null) {
+				preparedStatement.close();
+			}
+			if (dbConnection != null) {
+				dbConnection.close();
+			}
+		}
+		return tutor;
+	}
+	
 	public static void crearBrazalete(Brazalete brazalete) throws SQLException {
 
 		Connection dbConnection = null;
@@ -255,6 +340,34 @@ public class ConexionDB {
 			preparedStatement.setInt(1, brazalete.getIdPaciente());
 			preparedStatement.setInt(2, brazalete.getIdBrazalete());
 			preparedStatement.setTimestamp(3, new Timestamp (date.getTime()));
+
+			// execute insert SQL stetement
+			preparedStatement.executeUpdate();
+
+		} catch (SQLException e) {
+			logger.error(e.getMessage());
+		} finally {
+			if (preparedStatement != null) {
+				preparedStatement.close();
+			}
+			if (dbConnection != null) {
+				dbConnection.close();
+			}
+		}
+	}
+	
+	public static void actualizarBrazaleteAdultoMayor(Brazalete brazalete) throws SQLException{
+		Connection dbConnection = null;
+		PreparedStatement preparedStatement = null;
+		
+		String insertTableSQL = "UPDATE ADULTO_MAYOR SET BRAZALETE_BRA_IDENTIFICACION = ? WHERE PER_ID = ?";
+
+		try {
+			dbConnection = getDBConnection();
+			preparedStatement = dbConnection.prepareStatement(insertTableSQL);
+
+			preparedStatement.setInt(1, brazalete.getIdBrazalete());
+			preparedStatement.setInt(2, brazalete.getIdPaciente());
 
 			// execute insert SQL stetement
 			preparedStatement.executeUpdate();

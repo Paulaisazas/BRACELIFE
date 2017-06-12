@@ -8,6 +8,7 @@ import com.ean.bracelife.db.ConexionDB;
 import com.ean.bracelife.entidades.AdultoMayor;
 import com.ean.bracelife.entidades.Brazalete;
 import com.ean.bracelife.entidades.Parametros;
+import com.ean.bracelife.entidades.Tutor;
 import com.panamahitek.ArduinoException;
 import com.panamahitek.PanamaHitek_Arduino;
 import org.apache.log4j.Logger;
@@ -24,6 +25,7 @@ public class Conexion {
 	AdultoMayor adultoMayor = new AdultoMayor();
 	Parametros parametros = new Parametros();
 	Brazalete brazalete = new Brazalete();
+	Tutor tutor = new Tutor();
 	
 	//Estas variables ID y nombrePaciente quedarán en memoria durante el tiempo que corra el programa
 	String IDPaciente;
@@ -37,30 +39,37 @@ public class Conexion {
 			try {
 				//Si existen datos desde Arduino, se procesan
 				if(iniciador.isMessageAvailable()){
+					
 					//Obtenemos el pulso del paciente
 					String mensaje = iniciador.printMessage();
-					logger.info(mensaje);
-					int pulso = Integer.parseInt(mensaje);
 					
-					if(pulso<parametros.getValorMinimo()){
-						contadorBajo++;
-						contadorAlto = 0;
-						adultoMayor.setContadorPulsoBajo(contadorBajo);
-						logger.info("Contador bajo: " + contadorBajo);
-					} else if(pulso>parametros.getValorMaximo()){
-						contadorAlto++;
-						contadorBajo = 0;
-						adultoMayor.setContadorPulsoAlto(contadorAlto);
-						logger.info("Contador alto: " + contadorAlto);
-					} else{
-						contadorBajo = 0;
-						contadorAlto = 0;
-						adultoMayor.setContadorPulsoBajo(0);
-						adultoMayor.setContadorPulsoAlto(0);
+					//Evitar que acumulen pulsos
+					if(mensaje.length()<=3){
+						int pulso = Integer.parseInt(mensaje);
+						if(pulso<200){
+							logger.info("Pulso: " + pulso);
+							
+							if(pulso<parametros.getValorMinimo()){
+								contadorBajo++;
+								contadorAlto = 0;
+								adultoMayor.setContadorPulsoBajo(contadorBajo);
+								logger.info("Contador bajo: " + contadorBajo);
+							} else if(pulso>parametros.getValorMaximo()){
+								contadorAlto++;
+								contadorBajo = 0;
+								adultoMayor.setContadorPulsoAlto(contadorAlto);
+								logger.info("Contador alto: " + contadorAlto);
+							} else{
+								contadorBajo = 0;
+								contadorAlto = 0;
+								adultoMayor.setContadorPulsoBajo(0);
+								adultoMayor.setContadorPulsoAlto(0);
+							}
+							
+							//Se procesa cada pulso en BD
+							procesador.procesarPulso(mensaje, tutor, adultoMayor, parametros.getTiempoLimite());
+						}
 					}
-					
-					//Se procesa cada pulso en BD
-					procesador.procesarPulso(mensaje, adultoMayor);
 				}
 			} catch (SerialPortException | ArduinoException e) {
 				logger.error("Se ha presentado un error con la recepción de mensajería: "+ e);
@@ -76,6 +85,7 @@ public class Conexion {
 			ports = iniciador.getSerialPorts();
 			//Buscamos el adulto mayor con el id del paciente
 			adultoMayor = ConexionDB.obtenerAdultoMayorporID(idPaciente);
+			adultoMayor.setNombre(nombre);
 			
 			//Obtenemos los parametros
 			parametros = ConexionDB.obtenerParametros();
@@ -84,6 +94,11 @@ public class Conexion {
 			brazalete.setIdPaciente(idPaciente);
 			ConexionDB.obtenerBrazalete(brazalete);
 			
+			//Actualizamos el Brazalete del paciente
+			ConexionDB.actualizarBrazaleteAdultoMayor(brazalete);
+			
+			//Obtenemos los datos del tutor
+			tutor = ConexionDB.obtenerTutorporID(adultoMayor.getIdTutor());
 			
 			nombrePaciente = nombre;
 			

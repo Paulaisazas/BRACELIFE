@@ -3,6 +3,7 @@ package com.ean.bracelife.entidades;
 public class AdultoMayor {
 
 	private int idPersona;
+	private String nombre;
 	private int idTutor;
 	private String enfermedad;
 	private int brazaleteId;
@@ -44,5 +45,11 @@ public class AdultoMayor {
 	}
 	public void setContadorPulsoAlto(int contadorPulsoAlto) {
 		this.contadorPulsoAlto = contadorPulsoAlto;
+	}
+	public String getNombre() {
+		return nombre;
+	}
+	public void setNombre(String nombre) {
+		this.nombre = nombre;
 	}
 }

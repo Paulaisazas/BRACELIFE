@@ -7,23 +7,30 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Properties;
 
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.mail.util.ByteArrayDataSource;
+import javax.activation.*;
+
 import org.apache.log4j.Logger;
 
 import com.ean.bracelife.db.ConexionDB;
 import com.ean.bracelife.entidades.AdultoMayor;
+import com.ean.bracelife.entidades.Notificacion;
 import com.ean.bracelife.entidades.Pulso;
-
-import oracle.sql.DATE;
+import com.ean.bracelife.entidades.Tutor;
 
 public class ProcesadorPulso {
 
 	Logger logger = Logger.getLogger(ProcesadorPulso.class);
 	Properties prop = new Properties();
 	
-	public void procesarPulso(String mensaje, AdultoMayor paciente){
+	public void procesarPulso(String mensaje, Tutor tutor, AdultoMayor paciente, int pulsoLimite){
 		try {
 			prop.load(new FileReader("properties//db.properties"));
+			
 		Date date = new Date();
+		String alerta = "";
 		
 		Pulso pulso = new Pulso();
 		pulso.setHora(new Timestamp(date.getTime()));
@@ -33,10 +40,18 @@ public class ProcesadorPulso {
 		
 		ConexionDB.guardarPulso(pulso);
 		
-		if(paciente.getContadorPulsoAlto()==2){
-			logger.info("ALERTA, PULSO ALTO!!");
-		}else if(paciente.getContadorPulsoBajo() == 2){
-			logger.info("ALERTA, PULSO BAJO!!");
+		if(paciente.getContadorPulsoAlto()== pulsoLimite){
+			alerta = "El pulso del paciente " + paciente.getNombre() + " y número de documento "  + paciente.getIdPersona() +
+					" se encuentra por encima de los límites permitidos. El último pulso detectado ha sido de " + pulso.getValorPulso() +
+					" con fecha: " + pulso.getHora().toString().substring(0, pulso.getHora().toString().length()-3);
+			logger.error(alerta);
+			notificarTutor(tutor, alerta, paciente);
+		}else if(paciente.getContadorPulsoBajo() == pulsoLimite){
+			alerta = "El pulso del paciente " + paciente.getNombre() + " y número de documento "  + paciente.getIdPersona() +
+					" se encuentra por debajo de los límites permitidos. El último pulso detectado ha sido de " + pulso.getValorPulso() +
+					" con fecha: " + pulso.getHora().toString().substring(0, pulso.getHora().toString().length()-3);
+			notificarTutor(tutor, alerta, paciente);
+			logger.error(alerta);
 		}
 		
 		} catch (IOException e) {
@@ -45,6 +60,59 @@ public class ProcesadorPulso {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+	
+	public void notificarTutor(Tutor tutor, String mensaje, AdultoMayor paciente){
+		try{
+			Date date = new Date();
+			Notificacion notificacion = new Notificacion();
+			notificacion.setIdNotificacion(Integer.parseInt(prop.getProperty("notificacion")));
+			notificacion.setFechaNotificacion(new Timestamp(date.getTime()));
+			notificacion.setIdTutor(tutor.getIdTutor());
+			notificacion.setMensaje(mensaje);
+			ConexionDB.guardarNotificacion(notificacion);
+			enviarCorreo(tutor, notificacion.getMensaje(), paciente.getNombre());
+		} catch (Exception e){
+			logger.error(e);
+		}
+	}
+	
+	public void enviarCorreo(Tutor tutor, String mensaje, String nombrePaciente){
+		try{
+			logger.info("Enviando correo al tutor.");
+			String password = "ppldsi2017";
+			
+			Properties props = new Properties();
+			props.put("mail.smtp.auth", "true");
+			props.put("mail.smtp.starttls.enable", "true");
+			props.put("mail.smtp.host", "smtp.gmail.com");
+			props.put("mail.smtp.port", "587");
+			
+			Session session = Session.getInstance(props,
+					  new javax.mail.Authenticator() {
+						protected PasswordAuthentication getPasswordAuthentication() {
+							return new PasswordAuthentication(tutor.getEmailTutor(), password);
+						}
+					  });
+			
+			try{
+				Message message = new MimeMessage(session);
+				message.setFrom(new InternetAddress(tutor.getEmailTutor()));
+				message.setRecipients(Message.RecipientType.TO,
+						InternetAddress.parse(prop.getProperty("emailTo")));
+				message.setSubject("Alerta de pulso para "+ nombrePaciente + " - documento " + tutor.getIdPaciente());
+				message.setText(mensaje);
+				
+				Transport.send(message);
+				logger.info("Finalizando envío de correo.");
+			}catch (MessagingException e){
+				logger.error(e);
+				e.printStackTrace();
+			}
+			
+		} catch(Exception e){
+			logger.error(e);
 		}
 	}
 }
