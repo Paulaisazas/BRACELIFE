@@ -81,7 +81,7 @@ public class ProcesadorPulso {
 	public void enviarCorreo(Tutor tutor, String mensaje, String nombrePaciente){
 		try{
 			logger.info("Enviando correo al tutor.");
-			String password = "ppldsi2017";
+			String password = prop.getProperty("mailPassword");
 			
 			Properties props = new Properties();
 			props.put("mail.smtp.auth", "true");
