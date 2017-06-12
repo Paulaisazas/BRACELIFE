@@ -92,15 +92,15 @@ public class ProcesadorPulso {
 			Session session = Session.getInstance(props,
 					  new javax.mail.Authenticator() {
 						protected PasswordAuthentication getPasswordAuthentication() {
-							return new PasswordAuthentication(tutor.getEmailTutor(), password);
+							return new PasswordAuthentication(prop.getProperty("emailFrom"), password);
 						}
 					  });
 			
 			try{
 				Message message = new MimeMessage(session);
-				message.setFrom(new InternetAddress(tutor.getEmailTutor()));
+				message.setFrom(new InternetAddress(prop.getProperty("emailFrom")));
 				message.setRecipients(Message.RecipientType.TO,
-						InternetAddress.parse(prop.getProperty("emailTo")));
+						InternetAddress.parse(tutor.getEmailTutor()));
 				message.setSubject("Alerta de pulso para "+ nombrePaciente + " - documento " + tutor.getIdPaciente());
 				message.setText(mensaje);
 				

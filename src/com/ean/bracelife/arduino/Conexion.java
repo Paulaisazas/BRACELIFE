@@ -99,6 +99,7 @@ public class Conexion {
 			
 			//Obtenemos los datos del tutor
 			tutor = ConexionDB.obtenerTutorporID(adultoMayor.getIdTutor());
+			logger.info("Se obtiene el correo del tutor: " + tutor.getEmailTutor());
 			
 			nombrePaciente = nombre;
 			
